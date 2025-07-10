@@ -1,72 +1,36 @@
+
 import streamlit as st
 import joblib
 import numpy as np
 
-# Load the model and encoders
+# Load model and encoders
 bundle = joblib.load('schizo_model.pkl')
 model = bundle['model']
 encoders = bundle['encoders']
 
 st.title("Schizophrenia Prediction App")
 
-# --- Feature list for reference ---
-feature_names = [
-    'AGE', 'DUR_EPIS', 'SEX', 'OCCUP', 'MAR_STA',
-    'P_PSY_HX', 'FAM_P_HX', 'P_SOC_HX', 'EEG', 'INSIGHT'
-]
+# Get the full list of expected features from the model
+expected_features = model.feature_names_in_
 
-# Collect user inputs
+# Prepare input list for prediction
 inputs = []
 
-# AGE
-age = st.number_input("Age", min_value=1, max_value=100, value=30)
-inputs.append(age)
+st.subheader("Enter Patient Details")
 
-# DURATION OF EPISODE
-duration = st.number_input("Duration of Episode (months)", min_value=0.0, max_value=120.0, value=1.0)
-inputs.append(duration)
+for feature in expected_features:
+    if feature in encoders:
+        # Categorical feature
+        options = list(encoders[feature].classes_)
+        user_input = st.selectbox(f"{feature}", options, key=feature)
+        encoded = encoders[feature].transform([user_input])[0]
+        inputs.append(encoded)
+    else:
+        # Numeric feature
+        user_input = st.number_input(f"{feature}", step=1.0, key=feature)
+        inputs.append(user_input)
 
-# SEX
-sex = st.selectbox("Sex", encoders['SEX'].classes_)
-sex_encoded = encoders['SEX'].transform([sex])[0]
-inputs.append(sex_encoded)
-
-# OCCUPATION
-occup = st.selectbox("Occupation", encoders['OCCUP'].classes_)
-occup_encoded = encoders['OCCUP'].transform([occup])[0]
-inputs.append(occup_encoded)
-
-# MARITAL STATUS
-marsta = st.selectbox("Marital Status", encoders['MAR_STA'].classes_)
-marsta_encoded = encoders['MAR_STA'].transform([marsta])[0]
-inputs.append(marsta_encoded)
-
-# P_PSY_HX
-ppsy = st.selectbox("Past Psychological History", encoders['P_PSY_HX'].classes_)
-ppsy_encoded = encoders['P_PSY_HX'].transform([ppsy])[0]
-inputs.append(ppsy_encoded)
-
-# FAM_P_HX
-fphy = st.selectbox("Family Psychiatric History", encoders['FAM_P_HX'].classes_)
-fphy_encoded = encoders['FAM_P_HX'].transform([fphy])[0]
-inputs.append(fphy_encoded)
-
-# P_SOC_HX
-psoc = st.selectbox("Past Social History", encoders['P_SOC_HX'].classes_)
-psoc_encoded = encoders['P_SOC_HX'].transform([psoc])[0]
-inputs.append(psoc_encoded)
-
-# EEG
-eeg = st.selectbox("EEG Result", encoders['EEG'].classes_)
-eeg_encoded = encoders['EEG'].transform([eeg])[0]
-inputs.append(eeg_encoded)
-
-# INSIGHT
-insight = st.selectbox("Insight Level", encoders['INSIGHT'].classes_)
-insight_encoded = encoders['INSIGHT'].transform([insight])[0]
-inputs.append(insight_encoded)
-
-# Convert inputs into array for the model
+# Convert inputs to array
 input_array = np.array(inputs).reshape(1, -1)
 
 # --- Prediction and Confidence ---
